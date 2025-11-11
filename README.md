@@ -2,62 +2,97 @@
 
 โปรเจกต์นี้คือ RESTful API สำหรับระบบจัดการงาน (Task Management) ที่สร้างด้วย Express.js และ MySQL/MariaDB ตามโจทย์การบ้านวิชา 88734065 
 
+# Mini Task API (88734065)
+
+โปรเจกต์นี้คือ RESTful API สำหรับระบบจัดการงาน (Task Management) ที่สร้างด้วย Express.js และ MySQL/MariaDB ตามโจทย์การบ้านวิชา 88734065
+
 ## ✨ Features (ฟีเจอร์หลัก)
 
-**- API Versioning:** รองรับ `/api/v1` และ `/api/v2` (ที่ให้ response พร้อม metadata)
-
-**- Authentication:** ระบบ JWT (Access Token) พร้อม Hashing รหัสผ่าน (bcrypt) 
-
-**- Authorization (RBAC):** แบ่ง 3 Roles: `user`, `premium`, และ `admin` 
-
-**- Authorization (ABAC):** กำหนดสิทธิ์การเข้าถึง Task ตามเงื่อนไข (เช่น `isPublic`, `ownerId`, `isPremium`) 
-
-**- CRUD Operations:** จัดการข้อมูล Users และ Tasks 
-
-**- Rate Limiting:** จำกัดการใช้งานตาม Role (Anonymous, User, Premium) 
-
-**- Idempotency:** ป้องกันการสร้าง Task ซ้ำซ้อนด้วย `Idempotency-Key`
-
-**- Error Handling:** รูปแบบ Error Response ที่เป็นมาตรฐาน
-
-**- Filtering & Pagination:** ค้นหา Tasks ด้วย query params (เช่น `status`) 
+- API Versioning: รองรับ `/api/v1` และ `/api/v2` (ตอบกลับพร้อม metadata ใน v2)
+- Authentication: JWT (Access + Refresh) พร้อมการ hash รหัสผ่านด้วย bcrypt
+- Authorization (RBAC): Roles: `user`, `premium`, `admin`
+- Authorization (ABAC): กำหนดสิทธิ์ตาม attribute เช่น `isPublic`, `ownerId`, `isPremium`
+- CRUD: Users และ Tasks
+- Rate Limiting: จำกัดการใช้งานตาม role (Anonymous / User / Premium)
+- Idempotency: ป้องกันการสร้างคำขอซ้ำด้วย `Idempotency-Key` (DB-backed)
+- Error Handling: รูปแบบ error response ที่เป็นมาตรฐาน
+- Filtering & Pagination: รองรับ query params สำหรับค้นหา
 
 ## 🛠️ Tech Stack
 
-* Express.js 
-* MySQL / MariaDB 
-* JSON Web Token (JWT) 
-* bcrypt 
-* express-rate-limit 
+- Express.js
+- MySQL / MariaDB (mysql2)
+- JSON Web Token (JWT)
+- bcryptjs
+- express-rate-limit
 
 ## 🚀 Setup & Installation (วิธีการรัน)
 
-1.  **Clone a repository:**
-    ```bash
-    git clone [MY-Repo-URL]
-    cd [My-Repo-Folder]
-    ```
+1. Clone the repository:
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+```bash
+git clone [MY-Repo-URL]
+cd [My-Repo-Folder]
+```
 
-3.  **Setup Database:**
-    * สร้าง Database ใน MySQL/MariaDB 
-    * (ถ้ามี) รันไฟล์ Migration หรือ SQL script เพื่อสร้างตาราง `Users` และ `Tasks`
+2. Install dependencies:
 
-4.  **Environment Variables:**
-    * คัดลอกไฟล์ `.env.example` ไปเป็น `.env` 
-    * แก้ไขค่าตัวแปรในไฟล์ `.env` (ดูใน `.env.example` )
+```bash
+npm install
+```
 
-5.  **Run the application:**
-    ```bash
-    npm run dev 
-    # หรือ
-    npm start
-    ```
+3. Database setup:
+
+สร้างฐานข้อมูลใน MySQL/MariaDB (เช่น `task_api_db`) แล้วรัน migration หรือ SQL scripts ใน `database/` เช่น `database/idempotency-migration.sql` เพื่อสร้างตารางที่จำเป็น
+
+ตัวอย่าง SQL สำหรับอ้างอิง (ดูไฟล์ migrationที่แท้จริงใน repo):
+
+```sql
+CREATE TABLE IF NOT EXISTS Users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('user', 'premium', 'admin') NOT NULL DEFAULT 'user',
+  isPremium BOOLEAN DEFAULT false,
+  subscriptionExpiry DATETIME,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS Tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  status ENUM('pending', 'in_progress', 'completed') DEFAULT 'pending',
+  priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
+  ownerId INT NOT NULL,
+  assignedTo INT,
+  isPublic BOOLEAN DEFAULT false,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+4. Environment variables:
+
+คัดลอก `.env.example` เป็น `.env` แล้วแก้ค่า DB/JWT ตามเครื่องของคุณ
+
+5. Run the app:
+
+```bash
+npm start
+# หรือ
+npm run dev
+```
 
 ## 🔑 Environment Variables
 
-ดูในไฟล์ `.env.example`  (ต้องมีตัวแปรสำหรับเชื่อมต่อ Database และ JWT Secrets)
+ดูตัวอย่างใน `.env.example` (ต้องมี DATABASE_HOST, DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME, JWT_SECRET เป็นต้น)
+
+## การรวมสาขา `dev` -> `main`
+
+ถ้าต้องการนำการพัฒนาจาก `dev` ขึ้น `main` ให้สร้าง Pull Request บน GitHub หรือ merge locally และแก้ข้อขัดแย้งก่อน push ขึ้น `origin/main` (README.md conflict ถูกแก้เรียบร้อยแล้ว)
+
+---
+
+ถ้ามีส่วนที่ต้องการให้แก้ไขเพิ่มเติมใน README หรืออยากให้ผมช่วย finalize PR บน GitHub บอกได้เลย
